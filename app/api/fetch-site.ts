@@ -40,7 +40,7 @@ export default async function handler(req: Request): Promise<Response> {
       redirect: "follow",
       signal: AbortSignal.timeout(15_000),
       headers: {
-        "user-agent": "Mozilla/5.0 (compatible; RebootBot/1.0; +https://github.com/rushvoices/slice)",
+        "user-agent": "Mozilla/5.0 (compatible; RebootBot/1.0; +https://github.com/RushVoices/reboot)",
         accept: "text/html,application/xhtml+xml",
       },
     });
