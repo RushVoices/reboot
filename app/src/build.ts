@@ -135,7 +135,7 @@ async function serverPart(body: object, onText: (text: string) => void, signal?:
   });
   if (!res.ok || !res.body) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || `Building failed (${res.status}).`);
+    throw new Error(err.error || `Reboot's server had a problem (${res.status}). Try again in a moment.`);
   }
   const reader = res.body.getReader();
   const dec = new TextDecoder();

@@ -16,7 +16,7 @@
 // browser continues long builds in a new request (src/build.ts).
 
 import Anthropic from "@anthropic-ai/sdk";
-import { LIMITS, PLAN_SYSTEM, SYSTEM, kindOf, planMessage, str, userMessage, type BuildBody } from "../src/prompt";
+import { LIMITS, PLAN_SYSTEM, SYSTEM, kindOf, planMessage, str, userMessage, type BuildBody } from "../src/prompt.js";
 
 const MODEL = "claude-opus-5-5";
 const { MAX_HTML, MAX_TEXT } = LIMITS;
