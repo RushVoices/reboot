@@ -83,9 +83,14 @@ export async function POST(req: Request): Promise<Response> {
           return;
         }
         let msg = "Building failed. Try again.";
+        const detail = err instanceof Anthropic.APIError ? (err.error as { error?: { message?: string } } | undefined)?.error?.message ?? err.message : String(err);
         if (err instanceof Anthropic.RateLimitError) msg = "Too many builds right now. Wait a minute and try again.";
-        else if (err instanceof Anthropic.AuthenticationError) msg = "The server's Anthropic API key is invalid.";
+        else if (err instanceof Anthropic.AuthenticationError) msg = "The server's Anthropic API key isn't valid. Create an API key (it starts with sk-ant-api) at console.anthropic.com and set it as ANTHROPIC_API_KEY.";
+        else if (err instanceof Anthropic.PermissionDeniedError) msg = `The Anthropic key can't use this model: ${detail}`;
+        else if (err instanceof Anthropic.APIError && /credit balance/i.test(detail)) msg = "The Anthropic account is out of credits. Add credits at console.anthropic.com/settings/billing.";
         else if (err instanceof Anthropic.APIError && (err.status ?? 0) >= 500) msg = "The AI service is busy. Try again in a moment.";
+        else if (err instanceof Anthropic.APIError) msg = `Building failed (${err.status}): ${detail}`;
+        console.error("generate failed:", err instanceof Anthropic.APIError ? `${err.status} ${detail}` : err);
         if (!req.signal.aborted) send({ t: "error", d: msg });
       } finally {
         clearTimeout(timer);
