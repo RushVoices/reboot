@@ -21,7 +21,8 @@ Any app. Any idea. Anyone can build.
 | `app/src/site.ts` | Cleans a website's HTML and pulls out its colors, fonts, headings and links for remaking. |
 | `app/src/store.ts` | Your apps and every version of them, saved in the browser (localStorage). |
 | `app/src/chain/` | Solana: wallet, pump.fun launch (`pump.ts`), IPFS uploads. Loaded only when someone launches a coin. |
-| `app/api/generate.ts` | Calls Claude (`claude-opus-5-5`) to plan, build or change an app. Streams the result and continues long apps automatically. |
+| `app/api/generate.ts` | Plans, builds or changes an app with Google's free Gemini API (`app/src/gemini.ts`), or Claude if only `ANTHROPIC_API_KEY` is set. Streams the result and continues long apps across requests. |
+| `app/src/ownkey.ts` | Optional: a visitor's own Claude key, called straight from their browser (never sent to the server). |
 | `app/api/fetch-site.ts` | Reads a public website for remaking (private and local addresses are refused). |
 | `app/api/publish.ts` | Pins an app's HTML to IPFS and returns a public link. |
 | `app/api/upload.ts` | Pins the coin image and metadata to IPFS for pump.fun. |
@@ -50,7 +51,7 @@ Create + first buy only just fits in one transaction, so the on-chain metadata l
 
 ## Setup
 
-You need Node 20+, an [Anthropic API key](https://console.anthropic.com), a [Pinata](https://pinata.cloud) account, and a Solana RPC provider (Helius, Triton, QuickNode).
+Everything can run on free plans: a [Gemini API key](https://aistudio.google.com/apikey) (free, no card), a [Pinata](https://pinata.cloud) account, a [Helius](https://www.helius.dev) RPC URL, and [Vercel](https://vercel.com) Hobby. Node 20+ for local development.
 
 ```bash
 cd app && npm install
@@ -59,7 +60,7 @@ cp .env.example .env    # fill in the values
 npx vercel dev          # runs the site and the /api routes together
 ```
 
-Deploy with `npx vercel deploy` (project root: `app`), setting `ANTHROPIC_API_KEY`, `PINATA_JWT` (and optionally `PINATA_GATEWAY`), `VITE_RPC_URL` and `VITE_CLUSTER=mainnet-beta` in the Vercel project. Without `VITE_RPC_URL` everything works except coin launches.
+Deploy with `npx vercel deploy` (project root: `app`), setting `GEMINI_API_KEY`, `PINATA_JWT` (and optionally `PINATA_GATEWAY`), `VITE_RPC_URL` and `VITE_CLUSTER=mainnet-beta` in the Vercel project. Without `VITE_RPC_URL` everything works except coin launches.
 
 `vercel.json` gives `api/generate.ts` 300 seconds, the most Vercel's free Hobby plan allows. Each request stops writing at about 270 seconds and the browser carries on in a new request, so long builds still finish.
 

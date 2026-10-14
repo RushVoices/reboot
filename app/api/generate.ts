@@ -16,19 +16,22 @@
 // browser continues long builds in a new request (src/build.ts).
 
 import Anthropic from "@anthropic-ai/sdk";
-import { LIMITS, PLAN_SYSTEM, SYSTEM, kindOf, planMessage, str, userMessage, type BuildBody } from "../src/prompt.js";
+import { CONTINUE_SERVER as CONTINUE, LIMITS, PLAN_SYSTEM, SYSTEM, kindOf, planMessage, str, userMessage, type BuildBody } from "../src/prompt.js";
+import { GEMINI_MODELS, GeminiError, streamGemini } from "../src/gemini.js";
 
 const MODEL = "claude-opus-5-5";
 const { MAX_HTML, MAX_TEXT } = LIMITS;
 /** Stop writing this long into a request, safely inside Vercel's 300 s limit. */
 const BUDGET_MS = 270_000;
 
-const CONTINUE = (sofar: string) =>
-  `Your reply was cut off. Here is everything you wrote so far:\n<partial>\n${sofar}\n</partial>\n\n` +
-  "Continue exactly where it stops: output only the remaining characters, starting with the very next character. No repetition, no explanation, no code fences.";
-
 export async function POST(req: Request): Promise<Response> {
-  if (!process.env.ANTHROPIC_API_KEY) return Response.json({ error: "App building is not configured (ANTHROPIC_API_KEY is missing)." }, { status: 500 });
+  // Free by default: Gemini's free tier when GEMINI_API_KEY is set, else Claude
+  // with ANTHROPIC_API_KEY (paid). Visitors with their own Claude key never
+  // reach this route; their browser calls Anthropic directly (src/build.ts).
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (!geminiKey && !process.env.ANTHROPIC_API_KEY) {
+    return Response.json({ error: "App building is not configured (GEMINI_API_KEY is missing)." }, { status: 500 });
+  }
 
   let body: BuildBody & { mode?: unknown; partial?: unknown };
   try { body = await req.json(); } catch { return Response.json({ error: "Send JSON." }, { status: 400 }); }
@@ -45,7 +48,7 @@ export async function POST(req: Request): Promise<Response> {
   const effort = partial || kind === "change" ? "low" : "medium";
   const maxTokens = planning ? 16000 : remake ? 96000 : 64000;
 
-  const client = new Anthropic();
+  const client = geminiKey ? null! : new Anthropic();
   const enc = new TextEncoder();
   const out = new ReadableStream<Uint8Array>({
     async start(ctrl) {
@@ -57,6 +60,27 @@ export async function POST(req: Request): Promise<Response> {
       const timer = setTimeout(() => stop.abort(), BUDGET_MS);
       const signal = AbortSignal.any([req.signal, stop.signal]);
       try {
+        if (geminiKey) {
+          let result: { complete: boolean } | null = null;
+          for (const model of GEMINI_MODELS) {
+            try {
+              result = await streamGemini({
+                key: geminiKey, model, signal, maxTokens: Math.min(maxTokens, 65536),
+                system, input: partial ? `${first}\n\n${CONTINUE(partial)}` : first,
+                thinking: partial || kind === "change" ? "low" : "medium",
+                onText: (t) => { written += t; send({ t: "text", d: t }); },
+              });
+              break;
+            } catch (e) {
+              // A model that isn't available on this key: try the next one, if nothing was written yet.
+              if (e instanceof GeminiError && (e.status === 404 || e.status === 400 && /model/i.test(e.message)) && !written) continue;
+              throw e;
+            }
+          }
+          if (!result) throw new GeminiError(404, "No free Gemini model is available for this key.");
+          send(result.complete || planning ? { t: "done" } : { t: "more" });
+          return;
+        }
         const stream = client.beta.messages.stream({
           model: MODEL,
           max_tokens: maxTokens,
@@ -80,6 +104,15 @@ export async function POST(req: Request): Promise<Response> {
         if (stop.signal.aborted && !req.signal.aborted) {
           // Out of time for this request: continue if anything was written.
           send(written || partial ? { t: "more" } : { t: "error", d: "Claude took too long to start. Try again, or ask for a smaller app." });
+          return;
+        }
+        if (err instanceof GeminiError) {
+          const m = err.status === 429
+            ? "Reboot's free building limit is used up for now. Try again later, or add your own Claude key in AI settings."
+            : err.status === 400 && /API key/i.test(err.message) ? "The server's Gemini key isn't valid. Check GEMINI_API_KEY in Vercel."
+            : `Building failed (${err.status}): ${err.message}`;
+          console.error("gemini failed:", err.status, err.message);
+          if (!req.signal.aborted) send({ t: "error", d: m });
           return;
         }
         let msg = "Building failed. Try again.";

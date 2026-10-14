@@ -121,3 +121,8 @@ export function userMessage(b: BuildBody): string {
   }
   return parts.join("\n\n");
 }
+
+/** Asks Claude to carry on from a cut-off answer. */
+export const CONTINUE_SERVER = (sofar: string) =>
+  `Your reply was cut off. Here is everything you wrote so far:\n<partial>\n${sofar}\n</partial>\n\n` +
+  "Continue exactly where it stops: output only the remaining characters, starting with the very next character. No repetition, no explanation, no code fences.";

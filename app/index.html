@@ -316,6 +316,16 @@ select.in{border:1px solid var(--line);background:var(--surface);border-radius:v
   #deviceSeg{display:none}
 }
 
+.ai-pill{gap:7px}
+.ai-pill i{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px var(--green-soft)}
+.ai-pill.own i{background:#7C5CFF;box-shadow:0 0 0 3px #EEE9FF}
+.ai-choice{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ai-opt{border:1px solid var(--line);border-radius:var(--r-m);padding:10px 12px;display:flex;flex-direction:column;gap:2px;font-size:.86rem;color:var(--mute)}
+.ai-opt b{color:var(--ink);font-weight:560}
+.ai-opt.on{border-color:var(--green);background:var(--green-soft)}
+@media (max-width:480px){.ai-choice{grid-template-columns:1fr}}
+@media (max-width:560px){#aiLabel{display:none}}
+
 /* coin dialog */
 dialog{border:1px solid var(--line);border-radius:var(--r-l);padding:0;max-width:min(540px,calc(100vw - 32px));width:100%;background:var(--surface);color:var(--ink);box-shadow:var(--shadow-lg)}
 dialog::backdrop{background:rgba(8,8,10,.5);backdrop-filter:blur(3px)}
@@ -360,6 +370,7 @@ textarea.in{resize:vertical;min-height:64px}
       <button class="btn ghost sm" type="button" id="navDocs">Docs</button>
     </nav>
     <span class="grow"></span>
+    <button class="btn ghost sm ai-pill" id="aiBtn" type="button"><i></i><span id="aiLabel">Free AI</span></button>
     <button class="btn sm" id="walletBtn" type="button">Connect wallet</button>
   </div>
 </header>
@@ -523,6 +534,8 @@ textarea.in{resize:vertical;min-height:64px}
         <p>Write what you want the way you'd explain it to a friend. Mention the screens, the main things people do, and the feel you want. For example: <em>"A recipe box that scales ingredients by servings, with a weekly meal planner and a shopping list."</em></p>
         <h3>Pick a starting point</h3>
         <p>The starting points build your own version of an app people usually pay for, like a design tool, a docs app or a music player. Each one comes with a detailed brief, so you get a full-featured app from one tap. Your version gets its own name and look.</p>
+        <h3>Free AI or your own Claude key</h3>
+        <p>Building is free: Reboot uses a free AI by default, with a daily limit shared by everyone. For better apps, open <strong>Free AI</strong> in the top bar and add your own Claude API key from <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>. Builds then use Claude and are billed to your Anthropic account. Your key stays in your browser and is sent only to Anthropic, never to Reboot's server.</p>
         <h3>What to expect</h3>
         <p>Every app is built to a quality bar: every button works, there are proper empty and error states, it works on phones and desktops, it has light and dark themes, and it opens with realistic sample content.</p>
         <p>A progress bar shows how far along the build is, how long it's taken and roughly how long is left. New apps usually take a few minutes. Changes are faster: Reboot sends back only the parts that change, not the whole app. If an answer gets long, Reboot continues it automatically in parts.</p>
@@ -607,14 +620,15 @@ textarea.in{resize:vertical;min-height:64px}
         <h2>Host your own Reboot</h2>
         <p>To run your own copy of Reboot with real coin launches:</p>
         <ol>
-          <li>Get an <a href="https://console.anthropic.com" target="_blank" rel="noopener">Anthropic API key</a>, a <a href="https://pinata.cloud" target="_blank" rel="noopener">Pinata</a> key for IPFS, and a Solana RPC URL from Helius, Triton or QuickNode.</li>
+          <li>Get a free <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Gemini API key</a>, a free <a href="https://pinata.cloud" target="_blank" rel="noopener">Pinata</a> key for IPFS, and a free Solana RPC URL from <a href="https://www.helius.dev" target="_blank" rel="noopener">Helius</a>.</li>
           <li>Import the repository into <a href="https://vercel.com/new" target="_blank" rel="noopener">Vercel</a> with <code>app</code> as the root directory.</li>
           <li>Set the environment variables below and deploy.</li>
         </ol>
         <div class="table-wrap"><table>
           <thead><tr><th>Variable</th><th>What it's for</th></tr></thead>
           <tbody>
-            <tr><td><code>ANTHROPIC_API_KEY</code></td><td>Builds apps (server only)</td></tr>
+            <tr><td><code>GEMINI_API_KEY</code></td><td>Builds apps on Google's free tier (server only)</td></tr>
+            <tr><td><code>ANTHROPIC_API_KEY</code></td><td>Optional, paid: build with Claude instead (used only if <code>GEMINI_API_KEY</code> isn't set)</td></tr>
             <tr><td><code>PINATA_JWT</code></td><td>Publishes apps and coin details to IPFS (server only)</td></tr>
             <tr><td><code>PINATA_GATEWAY</code></td><td>Optional: your own IPFS gateway for images</td></tr>
             <tr><td><code>VITE_RPC_URL</code></td><td>Solana RPC the browser uses to launch coins</td></tr>
@@ -624,7 +638,7 @@ textarea.in{resize:vertical;min-height:64px}
         <p>Before sending anyone real SOL, check the launch transaction against mainnet. This builds the exact transaction Reboot sends and simulates it without sending it or spending anything:</p>
         <pre><code>cd app
 npm run simulate:launch -- https://your-rpc-url 0.01</code></pre>
-        <p>Every build is charged to your Anthropic key, so add sign-in or rate limits before you share your site widely.</p>
+        <p>With the free Gemini key, hosting Reboot costs nothing. Google's free tier has daily limits shared by all visitors, and Google may use free-tier requests to improve its products.</p>
       </section>
 
       <section id="d-faq">
@@ -687,6 +701,24 @@ npm run simulate:launch -- https://your-rpc-url 0.01</code></pre>
     <pre class="code" id="code" hidden></pre>
   </section>
 </div>
+
+<dialog id="aiDlg" aria-labelledby="aiTitle">
+  <form class="dlg" method="dialog" id="aiForm">
+    <h2 id="aiTitle">AI settings</h2>
+    <p>Reboot builds apps with a free AI by default. For better results, add your own Claude API key: builds then use Claude and are billed to your Anthropic account.</p>
+    <div class="ai-choice">
+      <div class="ai-opt" id="aiFree"><b>Free AI</b><span>No account needed. Shared daily limit, simpler apps.</span></div>
+      <div class="ai-opt" id="aiOwn"><b>Your Claude key</b><span>Best quality. Your key stays in this browser and is sent only to Anthropic.</span></div>
+    </div>
+    <div class="field"><label for="aiKey">Claude API key <span>optional</span></label><input class="in" id="aiKey" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-api03-…"></div>
+    <p class="note">Get one at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com/settings/keys</a>. Leave it empty to use the free AI.</p>
+    <p class="err-line" id="aiErr" role="alert"></p>
+    <div class="dlg-foot">
+      <button class="btn" type="button" id="aiClear">Use free AI</button>
+      <button class="btn solid" type="button" id="aiSave">Save</button>
+    </div>
+  </form>
+</dialog>
 
 <dialog id="coinDlg" aria-labelledby="coinTitle">
   <form class="dlg" method="dialog" id="coinForm">

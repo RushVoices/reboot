@@ -5,6 +5,7 @@
 // separates the two. A plan is plain text.
 
 import { PLAN_SYSTEM, SYSTEM, kindOf, planMessage, userMessage } from "./prompt";
+import { askOwnClaude, ownKey } from "./ownkey";
 
 export const IN_ARTIFACT = import.meta.env.MODE === "artifact";
 
@@ -184,7 +185,9 @@ async function askServer(body: object, onText: (raw: string, part: number) => vo
 export async function plan(req: BuildRequest, onText: (text: string) => void, signal?: AbortSignal): Promise<string> {
   const text = IN_ARTIFACT
     ? await askClaude(`${PLAN_SYSTEM}\n\n---\n\n${planMessage(req)}`, { maxParts: 1 }, (t) => onText(t), signal)
-    : await askServer({ ...req, mode: "plan" }, (t) => onText(t), signal);
+    : ownKey()
+      ? await askOwnClaude(PLAN_SYSTEM, planMessage(req), { maxParts: 1, light: false }, (t) => onText(t), signal)
+      : await askServer({ ...req, mode: "plan" }, (t) => onText(t), signal);
   return text.trim();
 }
 
@@ -217,9 +220,11 @@ export function applyEdits(html: string, raw: string): string | null {
 }
 
 async function ask(req: BuildRequest, onProgress: (p: BuildProgress) => void, signal?: AbortSignal) {
-  return IN_ARTIFACT
-    ? askClaude(`${SYSTEM}\n\n---\n\n${userMessage(req)}`, { maxParts: 4 }, (t, part) => onProgress({ raw: t, part, ...splitOutput(t) }), signal)
-    : askServer(req, (t, part) => onProgress({ raw: t, part, ...splitOutput(t) }), signal);
+  const progress = (t: string, part: number) => onProgress({ raw: t, part, ...splitOutput(t) });
+  if (IN_ARTIFACT) return askClaude(`${SYSTEM}\n\n---\n\n${userMessage(req)}`, { maxParts: 4 }, progress, signal);
+  // A visitor's own Claude key: their browser calls Anthropic directly.
+  if (ownKey()) return askOwnClaude(SYSTEM, userMessage(req), { maxParts: 4, light: kindOf(req) === "change" }, progress, signal);
+  return askServer(req, progress, signal);
 }
 
 const complete = (html: string) => /<\/html>\s*$/i.test(html);

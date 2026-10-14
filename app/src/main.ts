@@ -6,6 +6,7 @@ import { IN_ARTIFACT, build, fetchSite, plan, type BuildRequest } from "./build"
 import { cleanHtml, siteNotes } from "./site";
 import { EXPECTED_APP_CHARS, Progress, duration } from "./progress";
 import { startShowcase } from "./showcase";
+import { ownKey, setOwnKey } from "./ownkey";
 import { PRESETS } from "./presets";
 import {
   type Project, deleteProject, getProject, listProjects, nameFrom, newProject, saveProject,
@@ -90,7 +91,7 @@ function goHome(sectionId?: string) {
 type Mode = "idea" | "site" | "code";
 let mode: Mode = "idea";
 const QUALITY: Record<Mode, string> = {
-  idea: "Usually ready in a few minutes",
+  idea: "Free to build. Usually ready in a few minutes",
   site: "Reads the site, writes a blueprint, then builds from it",
   code: "Writes a blueprint of your code, then rebuilds it",
 };
@@ -650,7 +651,40 @@ $<HTMLInputElement>("coinFile").addEventListener("change", (e) => {
   $<HTMLImageElement>("coinImg").src = URL.createObjectURL(f);
 });
 
+// ---- AI settings: free AI, or the visitor's own Claude key -----------------------
+
+function renderAi() {
+  const own = !!ownKey();
+  $("aiLabel").textContent = own ? "Your Claude" : "Free AI";
+  $("aiBtn").classList.toggle("own", own);
+  $("aiFree").classList.toggle("on", !own);
+  $("aiOwn").classList.toggle("on", own);
+}
+$("aiBtn").addEventListener("click", () => {
+  $<HTMLInputElement>("aiKey").value = ownKey();
+  $("aiErr").textContent = "";
+  renderAi();
+  $<HTMLDialogElement>("aiDlg").showModal();
+});
+$("aiSave").addEventListener("click", () => {
+  const key = $<HTMLInputElement>("aiKey").value.trim();
+  if (key && !/^sk-ant-/.test(key)) { $("aiErr").textContent = "That doesn't look like a Claude API key. It should start with sk-ant-api."; return; }
+  setOwnKey(key);
+  renderAi();
+  $<HTMLDialogElement>("aiDlg").close();
+  toast(key ? "Builds now use your Claude key." : "Builds now use the free AI.");
+});
+$("aiClear").addEventListener("click", () => {
+  setOwnKey("");
+  renderAi();
+  $<HTMLDialogElement>("aiDlg").close();
+  toast("Builds now use the free AI.");
+});
+renderAi();
+
 if (IN_ARTIFACT) {
+  // Inside Claude, builds use the viewer's own Claude account; no AI setting needed.
+  $("aiBtn").hidden = true;
   // Wallets and IPFS publishing live on the deployed site.
   $("walletBtn").hidden = true;
   $("pubBtn").hidden = true;
