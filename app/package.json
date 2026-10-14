@@ -1,0 +1,29 @@
+{
+  "name": "reboot",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "preview": "vite preview",
+    "build:artifact": "node tools/artifact.mjs",
+    "simulate:launch": "esbuild tools/simulate-launch.ts --bundle --platform=node --format=esm --outfile=dist-sim/sim.mjs --log-level=error --banner:js=\"globalThis.__nativeFetch=globalThis.fetch;import{createRequire as __cr}from'module';import{fileURLToPath as __fu}from'url';const require=__cr(import.meta.url);const __filename=__fu(import.meta.url);const __dirname=__filename.replace(/[^/]+$/,'');\" && node --no-deprecation dist-sim/sim.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.133.0",
+    "@pump-fun/pump-sdk": "^4.0.0",
+    "@solana/spl-token": "^0.4.13",
+    "@solana/web3.js": "^1.98.0",
+    "bn.js": "^5.2.1",
+    "buffer": "^6.0.3"
+  },
+  "devDependencies": {
+    "@types/bn.js": "^5.1.6",
+    "simple-icons": "^16.35.0",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11",
+    "vite-plugin-node-polyfills": "^0.22.0"
+  }
+}

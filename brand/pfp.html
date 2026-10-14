@@ -1,0 +1,13 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap");
+html,body{margin:0}
+body{width:400px;height:400px}
+.pfp{width:400px;height:400px;position:relative;overflow:hidden;display:grid;place-items:center;
+  background:radial-gradient(120% 90% at 28% 18%,#2BD06C 0%,#16A34A 42%,#0C6B30 100%)}
+.pfp::before{content:"";position:absolute;inset:0;background:radial-gradient(60% 45% at 30% 22%,rgba(255,255,255,.28),transparent 70%)}
+.pfp::after{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.10) 1px,transparent 1.2px);background-size:16px 16px;-webkit-mask-image:radial-gradient(circle at 50% 50%,#000 30%,transparent 75%)}
+.r{position:relative;z-index:1;font-family:'SERIF';color:#fff;line-height:1;letter-spacing:-.04em;transform:translate(2px,-6px);text-shadow:0 10px 30px rgba(6,60,26,.35)}
+.geist .r{font-family:Geist;font-weight:600;font-size:250px;transform:translate(-3px,-6px)}
+.serif .r{font-family:'Instrument Serif';font-style:italic;font-size:300px;letter-spacing:-.02em;transform:translate(-4px,4px)}
+</style></head><body><div class="pfp" id="p"><span class="r">R</span></div>
+<script>document.getElementById("p").classList.add(location.hash.slice(1)||"geist")</script></body></html>

@@ -1,0 +1,730 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Reboot</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Describe an app, paste code or point at a website. Reboot builds your own version, then launches its coin on pump.fun.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='16' fill='%2316A34A'/><path d='M22.1 25.1A14 14 0 1 0 41.9 25.1M32 15v17' stroke='%23FFFFFF' stroke-width='6' fill='none' stroke-linecap='round'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: sticky nav; home = left-aligned hero with the composer, starting points beside it, then steps and your apps;
+   studio = chat column + preview; docs = sticky contents + article. Always white, with green for actions and highlights. */
+:root{
+  --bg:#FFFFFF; --surface:#FFFFFF; --surface-2:#F3F9F5; --ink:#0D1A13; --ink-2:#3A4A41; --mute:#66776D;
+  --line:#E2EEE6; --line-2:#CBE0D3; --green:#16A34A; --green-2:#12833C; --green-soft:#E9F7EE; --green-ink:#FFFFFF;
+  --link:#12833C; --bad:#C2321F; --good:#12833C;
+  --sans:'Geist',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --r-s:8px; --r-m:12px; --r-l:16px;
+  --shadow:0 1px 2px rgba(13,26,19,.04),0 10px 30px -16px rgba(13,60,35,.16);
+  --shadow-lg:0 1px 2px rgba(13,26,19,.05),0 24px 60px -24px rgba(13,60,35,.28);
+  --ease:cubic-bezier(.2,.7,.2,1);
+  --gutter-l:max(16px,env(safe-area-inset-left,0px)); --gutter-r:max(16px,env(safe-area-inset-right,0px));
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:400 15px/1.65 var(--sans);font-feature-settings:"ss01","cv11";-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.wrap{max-width:1200px;margin-inline:auto;padding-left:var(--gutter-l);padding-right:var(--gutter-r)}
+@media (min-width:720px){.wrap{padding-left:max(32px,env(safe-area-inset-left,0px));padding-right:max(32px,env(safe-area-inset-right,0px))}}
+a{color:inherit}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--green);outline-offset:2px;border-radius:6px}
+[hidden]{display:none!important}
+.mono{font-family:var(--mono);font-size:.72rem;letter-spacing:.04em;color:var(--mute)}
+h1,h2,h3{text-wrap:balance;letter-spacing:-.03em;margin:0;font-weight:560}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:10px;padding:8px 15px;font-weight:500;font-size:.9rem;line-height:1.2;text-decoration:none;border:1px solid var(--line-2);background:var(--surface);color:var(--ink);transition:background .15s,border-color .15s,transform .15s,opacity .15s;white-space:nowrap}
+.btn:hover{border-color:var(--green)}
+.btn.solid{background:var(--green);border-color:var(--green);color:var(--green-ink)}
+.btn.solid:hover{background:var(--green-2);border-color:var(--green-2)}
+.btn.green{background:var(--green);border-color:var(--green);color:var(--green-ink)}
+.btn.green:hover{background:var(--green-2);border-color:var(--green-2)}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--ink-2)}
+.btn.ghost:hover{background:var(--surface-2);color:var(--ink)}
+.btn.sm{padding:6px 11px;font-size:.84rem}
+.btn.lg{padding:11px 18px;font-size:.95rem}
+.btn:active{transform:scale(.98)}
+.btn[disabled]{opacity:.4;cursor:not-allowed}
+.kbd{font-family:var(--mono);font-size:.7rem;color:var(--mute);border:1px solid var(--line);border-radius:5px;padding:1px 5px;background:var(--surface)}
+
+/* nav */
+.nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:saturate(1.4) blur(14px);-webkit-backdrop-filter:saturate(1.4) blur(14px);border-bottom:1px solid var(--line)}
+.nav .wrap{display:flex;align-items:center;gap:6px;height:58px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:600;font-size:1.06rem;letter-spacing:-.03em;background:none;border:0;padding:0;margin-right:14px}
+.brand svg{width:26px;height:26px}
+.nav-links{display:flex;gap:2px}
+.nav .grow{flex:1}
+@media (max-width:640px){.nav-links{display:none}}
+@media (max-width:420px){#walletBtn{display:none}}
+
+/* home */
+.hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:clamp(28px,4vw,56px);padding-block:clamp(36px,7vw,88px) 8px;align-items:start}
+.hero>*{min-width:0}
+.showcase{overflow:visible}
+body{overflow-x:clip}
+@media (max-width:980px){.hero{grid-template-columns:minmax(0,1fr)}}
+.pill{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 12px 4px 5px;font-size:.82rem;color:var(--mute);margin-bottom:22px;text-decoration:none}
+.pill b{background:var(--green-soft);color:var(--green-2);border-radius:999px;padding:1px 8px;font-size:.72rem;font-weight:550}
+.hero h1{font-size:clamp(2.3rem,5vw,4.1rem);font-weight:540;line-height:1.04;letter-spacing:-.042em;max-width:14ch}
+.hero h1 span{color:var(--green)}
+.lede{font-size:clamp(1rem,1.35vw,1.1rem);line-height:1.7;color:var(--mute);max-width:52ch;margin:20px 0 30px}
+
+.composer{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-l);box-shadow:var(--shadow);overflow:hidden}
+.tabs{display:flex;gap:2px;padding:6px;border-bottom:1px solid var(--line);background:var(--surface-2);overflow-x:auto}
+.tabs button{border:0;background:transparent;border-radius:var(--r-s);padding:6px 11px;font-size:.84rem;font-weight:500;color:var(--mute);white-space:nowrap;display:flex;gap:7px;align-items:center}
+.tabs button svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+@media (max-width:460px){.tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.tabs button{justify-content:center;padding:6px 4px;font-size:.78rem;white-space:normal;text-align:center;line-height:1.2}.tabs button svg{display:none}}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--green-2);box-shadow:0 0 0 1px var(--line-2)}
+.panel{padding:12px 14px 4px;display:flex;flex-direction:column;gap:10px}
+.panel textarea,.panel input{width:100%;border:0;background:transparent;outline:none;resize:none}
+.panel textarea{min-height:96px;font-size:1rem;line-height:1.55}
+.panel textarea.code{font-family:var(--mono);font-size:.8rem;min-height:150px}
+.url{display:flex;align-items:center;gap:0;border:1px solid var(--line);border-radius:var(--r-s);background:var(--bg);padding:0 10px;transition:border-color .15s}
+.url:focus-within{border-color:var(--green);box-shadow:0 0 0 3px var(--green-soft)}
+.url span{font-family:var(--mono);font-size:.82rem;color:var(--mute)}
+.url input{padding:10px 4px;font-size:.98rem}
+.panel textarea.small{min-height:56px;font-size:.95rem}
+.paste{font-size:.86rem;color:var(--ink-2)}
+.paste summary{cursor:pointer;color:var(--mute);list-style:none;display:inline-flex;gap:6px;align-items:center}
+.paste summary::-webkit-details-marker{display:none}
+.paste summary::before{content:"+";font-family:var(--mono);width:16px;height:16px;border:1px solid var(--line-2);border-radius:4px;display:grid;place-items:center;font-size:.7rem}
+.paste[open] summary::before{content:"−"}
+.paste textarea{margin-top:8px;border:1px solid var(--line);border-radius:var(--r-s);padding:8px 10px;background:var(--bg)}
+.hint{font-size:.82rem;color:var(--mute);margin:0}
+.c-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px 12px;flex-wrap:wrap}
+.quality{display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--mute)}
+.quality i{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px color-mix(in srgb,var(--green) 30%,transparent)}
+
+.picker{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-l);box-shadow:var(--shadow);padding:18px;display:flex;flex-direction:column;gap:12px}
+.picker-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.picker-head h2{font-size:1rem;font-weight:560;letter-spacing:-.015em}
+.picker-head span{font-size:.82rem;color:var(--mute)}
+.presets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+@media (max-width:400px){.presets{grid-template-columns:minmax(0,1fr)}}
+.preset{display:flex;align-items:center;gap:12px;text-align:left;padding:11px;border:1px solid var(--line);background:var(--surface);border-radius:var(--r-m);min-width:0;transition:border-color .15s,background .15s,transform .15s var(--ease)}
+.preset:hover{border-color:var(--green);background:var(--green-soft);transform:translateY(-1px)}
+.preset .ico{flex:none;width:38px;height:38px;border-radius:10px;background:#fff;border:1px solid var(--line);display:grid;place-items:center}
+.preset .ico svg{width:20px;height:20px}
+.preset .txt{display:flex;flex-direction:column;min-width:0;line-height:1.3}
+.preset b{font-weight:550;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.preset small{color:var(--mute);font-size:.8rem}
+.picker .note{font-size:.78rem;color:var(--mute);margin:0}
+
+.section{padding-top:clamp(64px,9vw,112px)}
+.sec-head{display:flex;justify-content:space-between;align-items:end;gap:16px;margin-bottom:22px;flex-wrap:wrap}
+.sec-head h2{font-size:clamp(1.55rem,3vw,2.15rem);font-weight:550}
+.sec-head p{margin:8px 0 0;color:var(--mute);max-width:52ch}
+.steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r-l);overflow:hidden;list-style:none;padding:0;margin:0}
+.steps li{background:var(--surface);padding:24px 22px;display:flex;flex-direction:column;gap:8px}
+.steps .n{font-family:var(--mono);font-size:.72rem;color:var(--green);font-weight:500}
+.steps h3{font-size:1.02rem;font-weight:560;letter-spacing:-.02em}
+.steps p{margin:0;color:var(--mute);font-size:.92rem}
+@media (max-width:900px){.steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:520px){.steps{grid-template-columns:minmax(0,1fr)}}
+.apps{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.app-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-l);overflow:hidden;display:flex;flex-direction:column;text-align:left;padding:0;transition:transform .15s var(--ease),box-shadow .15s,border-color .15s}
+.app-card:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:var(--green)}
+.app-card .thumb{height:150px;background:var(--surface-2);position:relative;overflow:hidden;pointer-events:none;border-bottom:1px solid var(--line)}
+.app-card .thumb iframe{width:1200px;height:750px;border:0;transform:scale(.25);transform-origin:0 0;background:#fff}
+.app-card .meta{padding:11px 13px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.app-card .meta b{font-weight:600;font-size:.92rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tag{font-family:var(--mono);font-size:.68rem;padding:2px 7px;border-radius:999px;background:var(--green-soft);color:var(--green-2);white-space:nowrap}
+.empty{color:var(--mute);border:1px dashed var(--line-2);border-radius:var(--r-l);padding:28px;text-align:center;margin:0}
+footer{padding-block:72px 40px;color:var(--mute);font-size:.84rem;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;border-top:1px solid var(--line);margin-top:96px}
+footer a{color:var(--ink-2)}
+
+/* hero showcase: a tilted phone playing the copy → paste → build → yours loop */
+.showcase{position:relative;height:clamp(460px,48vw,600px);perspective:1400px;display:grid;place-items:center;touch-action:pan-y}
+.showcase::before{content:"";position:absolute;inset:6% 4%;background:radial-gradient(closest-side,color-mix(in srgb,var(--green) 22%,transparent),transparent 72%);filter:blur(30px);opacity:.55;pointer-events:none}
+.scene{--ry:-18deg;--rx:8deg;position:relative;transform-style:preserve-3d;transform:rotateY(var(--ry)) rotateX(var(--rx));transition:transform .5s var(--ease);animation:bob 7s ease-in-out infinite}
+@keyframes bob{50%{translate:0 -10px}}
+.phone{width:258px;height:530px;border-radius:44px;background:linear-gradient(145deg,#2a2a2e,#0d0d0f 60%);padding:10px;box-shadow:inset 0 0 0 1.5px #3a3a40,0 50px 80px -30px rgba(0,0,0,.55),0 30px 40px -30px rgba(0,0,0,.4);transform:translateZ(0);position:relative}
+.phone::after{content:"";position:absolute;right:-3px;top:120px;width:3px;height:56px;border-radius:0 3px 3px 0;background:#2a2a2e}
+.screen{position:relative;width:100%;height:100%;border-radius:35px;overflow:hidden;background:#FFFFFF;color:#0B0B0C;font-size:12px;line-height:1.4}
+.island{position:absolute;top:9px;left:50%;translate:-50% 0;width:84px;height:24px;border-radius:20px;background:#0B0B0C;z-index:5}
+.scr{position:absolute;inset:0;padding:44px 16px 16px;display:flex;flex-direction:column;gap:12px;background:#FFFFFF;opacity:0;transform:translateX(30px);transition:opacity .35s var(--ease),transform .45s var(--ease);pointer-events:none;z-index:1}
+.scr.on{opacity:1;transform:none;z-index:2}
+.st-top{display:flex;justify-content:space-between;align-items:center;font-weight:600;font-size:11px;color:#46474D}
+.st-back{font-size:18px;line-height:1}
+.share{background:#EDEDF0;border-radius:99px;padding:4px 10px;color:#0B0B0C;transition:transform .15s}
+.st-hero{display:flex;gap:12px;align-items:center}
+.st-icon{width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#FFB547,#FF5E3A);display:grid;place-items:center;color:#fff;font-weight:700;font-size:28px;box-shadow:0 6px 14px -6px rgba(255,94,58,.6)}
+.st-hero b{display:block;font-size:15px}
+.st-hero small{display:block;color:#7A7B82}
+.st-price{display:inline-block;margin-top:4px;font-weight:600;font-size:11px;background:#0B0B0C;color:#fff;border-radius:99px;padding:2px 8px}
+.st-row{display:flex;justify-content:space-between;border-block:1px solid #E6E6E3;padding:7px 2px;color:#46474D;font-size:11px}
+.st-shot{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;flex:1}
+.st-shot i{border-radius:10px;background:linear-gradient(180deg,#fff,#EDEDEA);border:1px solid #E6E6E3}
+.st-cta{background:#0B0B0C;color:#fff;border-radius:12px;text-align:center;padding:10px;font-weight:600}
+.mini-toast{position:absolute;left:50%;top:52px;translate:-50% -12px;background:#0B0B0C;color:#fff;border-radius:99px;padding:6px 12px;font-weight:600;font-size:11px;opacity:0;transition:opacity .25s,translate .25s var(--ease);white-space:nowrap}
+.mini-toast::before{content:"✓ ";color:#4ADE80}
+.mini-toast.on{opacity:1;translate:-50% 0}
+.nx-brand{display:flex;align-items:center;gap:7px;font-weight:600;font-size:13px}
+.nx-logo{width:20px;height:20px}
+.nx-h{font-size:22px;font-weight:600;letter-spacing:-.04em;line-height:1.05;margin:6px 0 0}
+.nx-tabs{display:flex;gap:4px;background:#EDEDEA;border-radius:9px;padding:3px;font-size:10.5px;color:#7A7B82}
+.nx-tabs span{flex:1;text-align:center;padding:5px;border-radius:7px}
+.nx-tabs .on{background:#fff;color:#12833C;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.nx-url{display:flex;align-items:center;border:1.5px solid #16A34A;border-radius:10px;padding:9px 10px;background:#fff;font-size:13px;min-height:40px}
+.nx-url span:first-child{font-family:var(--mono);color:#7A7B82;font-size:11px}
+.caret{width:1.5px;height:15px;background:#0B0B0C;margin-left:1px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.nx-hint{color:#7A7B82;font-size:11px}
+.remake{margin-top:auto;background:#16A34A;color:#fff;border-radius:12px;text-align:center;padding:11px;font-weight:600;transition:transform .15s}
+.pressed{transform:scale(.94)}
+.b-card{background:#fff;border:1px solid #E6E6E3;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:0 10px 24px -14px rgba(0,0,0,.25)}
+.b-top{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:#46474D}
+.b-top b{font-size:20px;color:#0B0B0C;font-variant-numeric:tabular-nums;letter-spacing:-.03em}
+.b-bar{height:7px;border-radius:99px;background:#EDEDEA;overflow:hidden}
+.b-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#12833C,#22C55E);border-radius:99px}
+.b-lines{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:11.5px;color:#46474D}
+.b-lines li{display:flex;gap:7px;align-items:center;opacity:.25;transition:opacity .3s}
+.b-lines li::before{content:"";width:12px;height:12px;border-radius:4px;border:1.5px solid #D6D6D2;flex:none}
+.b-lines li.on{opacity:1}
+.b-lines li.on::before{background:#16A34A;border-color:#16A34A;box-shadow:inset 0 0 0 2.5px #fff}
+.s-done{gap:10px}
+.dn-top{display:flex;align-items:center;gap:8px}
+.dn-top b{font-size:15px}
+.dn-logo{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,#22C55E,#0E7A35);color:#fff;display:grid;place-items:center;font-weight:700}
+.dn-free{margin-left:auto;font-size:10px;font-weight:600;background:#E9F7EE;color:#12833C;border-radius:99px;padding:2px 8px}
+.dn-body{flex:1;display:grid;grid-template-columns:44px 1fr;gap:8px}
+.dn-side{display:flex;flex-direction:column;gap:6px;background:#EFEFEC;border-radius:12px;padding:8px}
+.dn-side i{height:22px;border-radius:7px;background:#fff}
+.dn-side i.on{background:#16A34A}
+.dn-doc{background:#fff;border:1px solid #E6E6E3;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:7px}
+.dn-doc b{font-size:14px;letter-spacing:-.02em}
+.dn-doc span{height:7px;border-radius:4px;background:#EDEDEA}
+.dn-doc span.short{width:60%}
+.dn-doc span.chk{height:12px;width:80%;background:linear-gradient(90deg,#0B0B0C 12px,transparent 12px 20px,#EDEDEA 20px);border-radius:3px}
+.dn-coin{background:#16A34A;color:#fff;border-radius:12px;text-align:center;padding:10px;font-weight:600}
+.tap{z-index:7;position:absolute;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;background:rgba(11,11,12,.18);border:2px solid rgba(11,11,12,.35);opacity:0;pointer-events:none;z-index:6}
+.tap.go{animation:tap .6s var(--ease)}
+@keyframes tap{0%{opacity:0;transform:scale(1.6)}30%{opacity:1;transform:scale(.8)}100%{opacity:0;transform:scale(1.2)}}
+.float{position:absolute;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow-lg);padding:10px 12px;font-size:12px;z-index:2}
+.card-code{left:-150px;top:70px;transform:translateZ(90px) rotateY(10deg);width:190px;display:flex;flex-direction:column;gap:6px;animation:drift 8s ease-in-out infinite}
+.card-code code{font-family:var(--mono);font-size:10.5px;line-height:1.55;color:var(--ink-2)}
+.card-pct{right:-112px;top:200px;transform:translateZ(130px);display:flex;flex-direction:column;align-items:flex-start;animation:drift 7s ease-in-out -2s infinite}
+.card-pct b{font-size:26px;font-weight:600;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.card-coin{right:-96px;bottom:54px;transform:translateZ(170px) scale(.85);display:flex;gap:10px;align-items:center;opacity:0;transition:opacity .4s,transform .5s var(--ease)}
+.card-coin.on{opacity:1;transform:translateZ(170px) scale(1)}
+.card-coin b{display:block;font-size:14px}
+.card-coin small{color:var(--mute);font-size:11px}
+.coin-dot{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#22C55E,#0E7A35);color:#fff;display:grid;place-items:center;font-weight:700;box-shadow:0 0 0 3px var(--green-soft)}
+@keyframes drift{50%{translate:0 -8px}}
+.showcase.still .card-coin{opacity:1;transform:translateZ(170px)}
+@media (prefers-reduced-motion:reduce){.scene,.card-code,.card-pct,.caret{animation:none}.scr{transition:none}}
+@media (max-width:980px){.showcase{height:560px}}
+@media (max-width:640px){.showcase{height:520px}.card-code,.card-pct{display:none}.card-coin{right:-24px;bottom:40px}.phone{width:236px;height:486px}}
+.starts .picker{box-shadow:none}
+.starts .presets{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:1000px){.starts .presets{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:720px){.starts .presets{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:340px){.starts .presets{grid-template-columns:minmax(0,1fr)}}
+
+/* docs */
+.docs{display:grid;grid-template-columns:220px minmax(0,1fr);gap:clamp(24px,5vw,64px);padding-block:40px 40px}
+.toc{position:sticky;top:calc(env(safe-area-inset-top,0px) + 78px);align-self:start;display:flex;flex-direction:column;gap:2px}
+.toc .mono{margin:0 0 8px 10px}
+.toc button{border:0;background:transparent;text-align:left;padding:6px 10px;border-radius:var(--r-s);color:var(--ink-2);font-size:.9rem}
+.toc button:hover{background:var(--surface-2);color:var(--ink)}
+@media (max-width:860px){.docs{grid-template-columns:minmax(0,1fr)}.toc{position:static;flex-direction:row;flex-wrap:wrap}.toc .mono{display:none}}
+.article{max-width:72ch;min-width:0}
+.article h1{font-size:clamp(2rem,4vw,2.7rem);font-weight:540;letter-spacing:-.04em;margin-bottom:12px}
+.article .intro{font-size:1.08rem;color:var(--ink-2);margin:0 0 8px}
+.article section{padding-top:36px;scroll-margin-top:80px}
+.article h2{font-size:1.35rem;font-weight:560;margin-bottom:10px;padding-top:28px;border-top:1px solid var(--line)}
+.article h3{font-size:1rem;font-weight:560;margin:20px 0 6px;letter-spacing:-.01em}
+.article p,.article li{color:var(--ink-2);line-height:1.75}
+.article p{margin:0 0 12px}
+.article ul,.article ol{padding-left:20px;margin:0 0 12px}
+.article li{margin-bottom:5px}
+.article strong{color:var(--ink);font-weight:600}
+.article code{font-family:var(--mono);font-size:.82em;background:var(--surface-2);border:1px solid var(--line);border-radius:5px;padding:1px 5px}
+.article pre{font-family:var(--mono);font-size:.8rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-m);padding:14px 16px;overflow-x:auto;margin:0 0 14px;line-height:1.6}
+.article pre code{background:none;border:0;padding:0}
+.callout{border:1px solid var(--line);background:var(--surface);border-radius:var(--r-m);padding:12px 14px;margin:0 0 14px;font-size:.92rem;color:var(--ink-2)}
+.callout.warn{border-color:color-mix(in srgb,var(--green) 60%,var(--line));background:color-mix(in srgb,var(--green) 12%,var(--surface))}
+.table-wrap{overflow-x:auto;margin:0 0 14px;border:1px solid var(--line);border-radius:var(--r-m)}
+.article table{border-collapse:collapse;width:100%;font-size:.9rem;font-variant-numeric:tabular-nums}
+.article th,.article td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+.article th{font-weight:600;color:var(--ink);background:var(--surface-2)}
+.article tr:last-child td{border-bottom:0}
+.article .flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:4px 0 16px;list-style:none;padding:0}
+.article .flow li{border:1px solid var(--line);background:var(--surface);border-radius:var(--r-m);padding:10px 12px;font-size:.86rem;margin:0}
+.article .flow li b{display:block;color:var(--ink);font-weight:600;margin-bottom:2px}
+@media (max-width:640px){.article .flow{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+
+/* studio */
+.studio{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);height:calc(100dvh - 59px)}
+.side{display:flex;flex-direction:column;border-right:1px solid var(--line);min-height:0;background:var(--bg)}
+.side-head{padding:10px 12px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:6px}
+.side-head input{flex:1;min-width:0;border:1px solid transparent;background:transparent;border-radius:var(--r-s);padding:5px 8px;font-weight:600;font-size:.98rem}
+.side-head input:hover,.side-head input:focus{border-color:var(--line);background:var(--surface);outline:none}
+.log{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:92%;padding:9px 12px;border-radius:12px;font-size:.9rem;line-height:1.5;white-space:pre-wrap;word-wrap:break-word}
+.msg.you{align-self:flex-end;background:var(--green);color:var(--green-ink);border-bottom-right-radius:4px}
+.msg.ai{align-self:flex-start;background:var(--surface);border:1px solid var(--line);border-bottom-left-radius:4px}
+.msg.ai .v{display:block;margin-top:6px}
+.msg.ai .v button{border:0;background:none;padding:0;color:var(--link);font-size:.8rem;text-decoration:underline;text-underline-offset:3px}
+.msg.err{border-color:color-mix(in srgb,var(--bad) 40%,var(--line));color:var(--bad)}
+.msg details{margin-top:6px;white-space:normal}
+.msg details summary{cursor:pointer;color:var(--mute);font-size:.8rem}
+.msg details pre{white-space:pre-wrap;font-family:var(--mono);font-size:.74rem;line-height:1.5;color:var(--ink-2);margin:8px 0 0;max-height:320px;overflow:auto}
+.msg.live{width:min(300px,92%)}
+.prog{display:flex;flex-direction:column;gap:7px;white-space:normal}
+.prog-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.prog-top .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prog-top .pct{font-variant-numeric:tabular-nums;font-weight:600;font-size:.9rem}
+.prog-track{height:6px;border-radius:99px;background:var(--surface-2);overflow:hidden;border:1px solid var(--line)}
+.prog-track i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--green-2),var(--green));border-radius:99px;transition:width .6s var(--ease)}
+.prog-meta{display:flex;justify-content:space-between;gap:10px;font-family:var(--mono);font-size:.7rem;color:var(--mute);font-variant-numeric:tabular-nums}
+.working{min-width:0;display:flex;gap:9px;align-items:center;color:var(--mute);font-size:.86rem}
+.working i{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 1s infinite alternate}
+@keyframes pulse{from{opacity:.25}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.working i,.progress li.on::before{animation:none}}
+.ask{border-top:1px solid var(--line);padding:10px}
+.ask form{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-m);padding:6px;display:flex;flex-direction:column;gap:6px;transition:border-color .15s}
+.ask form:focus-within{border-color:var(--line-2)}
+.ask textarea{border:0;background:transparent;resize:none;min-height:60px;padding:6px 8px;outline:none;font-size:.92rem}
+.ask .row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:0 2px 0 8px}
+.main{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--surface-2)}
+.bar{display:flex;align-items:center;gap:6px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--bg);flex-wrap:wrap}
+.bar .grow{flex:1}
+.seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-s);padding:2px}
+.seg button{border:0;background:transparent;border-radius:6px;padding:4px 10px;font-size:.8rem;font-weight:500;color:var(--mute)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+select.in{border:1px solid var(--line);background:var(--surface);border-radius:var(--r-s);padding:5px 8px;font-size:.8rem;max-width:210px}
+.stage{flex:1;display:flex;justify-content:center;align-items:stretch;padding:12px;min-height:0;overflow:auto}
+.frame{width:100%;height:100%;border:1px solid var(--line);border-radius:var(--r-m);background:#fff;box-shadow:var(--shadow);transition:width .3s var(--ease)}
+.stage.phone .frame{width:390px;max-width:100%}
+.code{flex:1;margin:0;padding:16px;overflow:auto;font-family:var(--mono);font-size:.76rem;line-height:1.6;background:var(--surface);white-space:pre;tab-size:2}
+.blank{margin:auto;text-align:center;color:var(--mute);max-width:34ch}
+.blank b{display:block;font-size:1.2rem;color:var(--ink);font-weight:600;margin-bottom:4px}
+.coin-chip{display:inline-flex;align-items:center;gap:6px;text-decoration:none;border-radius:var(--r-s);padding:6px 11px;background:var(--green);color:var(--green-ink);font-weight:600;font-size:.82rem}
+@media (max-width:900px){
+  .studio{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);height:auto;min-height:calc(100dvh - 59px)}
+  .side{border-right:0;border-bottom:1px solid var(--line);order:2}
+  .main{order:1;height:72dvh}
+  .log{max-height:40dvh}
+  #deviceSeg{display:none}
+}
+
+/* coin dialog */
+dialog{border:1px solid var(--line);border-radius:var(--r-l);padding:0;max-width:min(540px,calc(100vw - 32px));width:100%;background:var(--surface);color:var(--ink);box-shadow:var(--shadow-lg)}
+dialog::backdrop{background:rgba(8,8,10,.5);backdrop-filter:blur(3px)}
+.dlg{padding:22px;display:flex;flex-direction:column;gap:14px;max-height:calc(100dvh - 40px);overflow:auto}
+.dlg h2{font-size:1.5rem;font-weight:560;letter-spacing:-.03em}
+.dlg p{margin:0;color:var(--ink-2);font-size:.92rem}
+.coin-top{display:grid;grid-template-columns:104px minmax(0,1fr);gap:16px;align-items:start}
+.coin-img{width:104px;height:104px;border-radius:18px;overflow:hidden;background:var(--surface-2);position:relative;border:1px solid var(--line)}
+.coin-img img{width:100%;height:100%;object-fit:cover;display:block}
+.coin-img label{position:absolute;inset:auto 6px 6px 6px;text-align:center;background:rgba(11,11,12,.75);color:#fff;font-size:.72rem;border-radius:6px;padding:3px;cursor:pointer}
+.coin-img input{position:absolute;opacity:0;width:1px;height:1px}
+.fields{display:grid;gap:10px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:.8rem;font-weight:500;color:var(--ink-2);display:flex;justify-content:space-between}
+.field label span{font-weight:400;color:var(--mute);font-family:var(--mono);font-size:.7rem}
+.in{border:1px solid var(--line);background:var(--bg);border-radius:var(--r-s);padding:8px 10px;font-size:.92rem;width:100%}
+.in:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px var(--green-soft)}
+textarea.in{resize:vertical;min-height:64px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.warn{font-size:.84rem;background:color-mix(in srgb,var(--green) 16%,var(--surface));border:1px solid color-mix(in srgb,var(--green) 50%,var(--line));border-radius:var(--r-s);padding:9px 12px;color:var(--ink)}
+.err-line{color:var(--bad);font-size:.88rem;min-height:1.2em;margin:0}
+.progress{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.progress li{display:flex;gap:10px;align-items:center;font-size:.88rem;color:var(--mute)}
+.progress li::before{content:"";width:9px;height:9px;border-radius:50%;border:1.5px solid currentColor;flex:none}
+.progress li.on{color:var(--ink)}
+.progress li.on::before{background:var(--green);border-color:var(--green);animation:pulse 1s infinite alternate}
+.progress li.ok{color:var(--good)}
+.progress li.ok::before{background:var(--good);border-color:var(--good)}
+.dlg-foot{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 15px;border-radius:var(--r-s);font-size:.88rem;z-index:50;box-shadow:var(--shadow-lg);max-width:calc(100vw - 32px)}
+</style>
+</head>
+<body>
+<header class="nav">
+  <div class="wrap">
+    <button class="brand" id="homeBtn" type="button" aria-label="Reboot home">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#16A34A"/><path d="M22.1 25.1A14 14 0 1 0 41.9 25.1M32 15v17" stroke="#FFFFFF" stroke-width="6" fill="none" stroke-linecap="round"/></svg>
+      Reboot
+    </button>
+    <nav class="nav-links" aria-label="Main">
+      <button class="btn ghost sm" type="button" id="navBuild">Build</button>
+      <button class="btn ghost sm" type="button" id="navApps">My apps</button>
+      <button class="btn ghost sm" type="button" id="navDocs">Docs</button>
+    </nav>
+    <span class="grow"></span>
+    <button class="btn sm" id="walletBtn" type="button">Connect wallet</button>
+  </div>
+</header>
+
+<main id="home">
+  <div class="wrap">
+    <section class="hero" id="build">
+      <div>
+        <button class="pill" type="button" id="pillDocs"><b>New</b> Launch any app's coin on pump.fun</button>
+        <h1>Turn any app into <span>your own.</span></h1>
+        <p class="lede">Describe an app, paste code, or point at a website. Reboot plans it, designs it and writes a complete, working product. Keep changing it whenever you want, then launch its coin.</p>
+
+        <form class="composer" id="startForm" novalidate>
+          <div class="tabs" role="tablist" aria-label="How to start">
+            <button type="button" role="tab" id="tabIdea" aria-selected="true" aria-controls="panelIdea">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg>Describe it</button>
+            <button type="button" role="tab" id="tabSite" aria-selected="false" aria-controls="panelSite">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.6 2.6 14.4 0 17M12 3.5c-2.6 2.6-2.6 14.4 0 17"/></svg>Remake a website</button>
+            <button type="button" role="tab" id="tabCode" aria-selected="false" aria-controls="panelCode">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5"/></svg>Paste code</button>
+          </div>
+
+          <div class="panel" role="tabpanel" id="panelIdea" aria-labelledby="tabIdea">
+            <label for="ideaText" hidden>Describe your app</label>
+            <textarea id="ideaText" placeholder="A habit tracker with streaks, a weekly heatmap and reminders…"></textarea>
+          </div>
+
+          <div class="panel" role="tabpanel" id="panelSite" aria-labelledby="tabSite" hidden>
+            <label class="url" for="siteUrl"><span>https://</span><input id="siteUrl" inputmode="url" autocomplete="off" spellcheck="false" placeholder="linear.app"></label>
+            <label for="siteWant" hidden>What should change</label>
+            <textarea id="siteWant" class="small" placeholder="Anything to change? e.g. make it about my bakery, add online ordering (optional)"></textarea>
+            <details class="paste" id="sitePasteBox">
+              <summary>Paste the page's code instead</summary>
+              <label for="sitePaste" hidden>Page code</label>
+              <textarea id="sitePaste" class="code" placeholder="In your browser: right-click the page → View Page Source → select all → copy, then paste here."></textarea>
+            </details>
+            <p class="hint" id="siteHint">Reboot reads the page, plans a blueprint, then rebuilds it as your own app with its own name and branding.</p>
+          </div>
+
+          <div class="panel" role="tabpanel" id="panelCode" aria-labelledby="tabCode" hidden>
+            <label for="codeText" hidden>Code</label>
+            <textarea id="codeText" class="code" placeholder="Paste any code: a React component, a Python script, an old PHP page, a full HTML file…"></textarea>
+            <label for="codeWant" hidden>What should change</label>
+            <textarea id="codeWant" class="small" placeholder="What should it become? (optional)"></textarea>
+          </div>
+
+          <div class="c-foot">
+            <span class="quality" id="qualityLine"><i></i><span id="qualityText">Usually ready in a few minutes</span></span>
+            <span style="display:flex;gap:10px;align-items:center"><span class="kbd">⌘ ↵</span><button class="btn solid" type="submit" id="startBtn">Build it</button></span>
+          </div>
+        </form>
+      </div>
+
+      <div class="showcase" id="showcase" aria-hidden="true">
+        <div class="scene">
+          <div class="float card-code"><span class="mono">blueprint.txt</span><code>SCREENS &amp; LAYOUT<br>- Sidebar: notebooks, tags<br>- Editor: blocks, / menu<br>FEATURES<br>- Offline, search, export</code></div>
+          <div class="float card-pct"><span class="mono">Building</span><b>0%</b></div>
+          <div class="float card-coin"><span class="coin-dot">J</span><span><b>$JOT</b><small>Live on pump.fun</small></span></div>
+          <div class="phone">
+            <div class="screen">
+              <div class="island"></div>
+              <section class="scr s-store on">
+                <div class="st-top"><span class="st-back">‹</span><span>App Store</span><span class="share">Share</span></div>
+                <div class="st-hero"><div class="st-icon">N</div><div><b>Notely Pro</b><small>Notes &amp; docs</small><span class="st-price">$9.99 / month</span></div></div>
+                <div class="st-row"><span>★ 4.6</span><span>12+</span><span>Productivity</span></div>
+                <div class="st-shot"><i></i><i></i><i></i></div>
+                <div class="st-cta">Subscribe</div>
+                <div class="mini-toast">Link copied</div>
+              </section>
+              <section class="scr s-next">
+                <div class="nx-brand"><svg class="nx-logo" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#16A34A"/><path d="M22.1 25.1A14 14 0 1 0 41.9 25.1M32 15v17" stroke="#FFFFFF" stroke-width="7" fill="none" stroke-linecap="round"/></svg>Reboot</div>
+                <p class="nx-h">Turn any app into your own.</p>
+                <div class="nx-tabs"><span>Describe</span><span class="on">Remake a site</span></div>
+                <div class="nx-url"><span>https://</span><span class="typed"></span><span class="caret"></span></div>
+                <div class="nx-hint">Reads it, plans it, rebuilds it as yours.</div>
+                <div class="remake">Remake it</div>
+              </section>
+              <section class="scr s-build">
+                <div class="nx-brand"><svg class="nx-logo" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#16A34A"/><path d="M22.1 25.1A14 14 0 1 0 41.9 25.1M32 15v17" stroke="#FFFFFF" stroke-width="7" fill="none" stroke-linecap="round"/></svg>Reboot</div>
+                <div class="b-card">
+                  <div class="b-top"><span class="b-label">Starting…</span><b class="b-pct">0%</b></div>
+                  <div class="b-bar"><i></i></div>
+                  <ul class="b-lines"><li>Sidebar with notebooks</li><li>Block editor, / menu</li><li>Tags and search</li><li>Dark mode</li><li>Export to Markdown</li><li>Original name: Jotter</li></ul>
+                </div>
+              </section>
+              <section class="scr s-done">
+                <div class="dn-top"><span class="dn-logo">J</span><b>Jotter</b><span class="dn-free">Free · yours</span></div>
+                <div class="dn-body">
+                  <div class="dn-side"><i class="on"></i><i></i><i></i><i></i></div>
+                  <div class="dn-doc"><b>Launch plan</b><span></span><span></span><span class="short"></span><span class="chk"></span><span class="chk"></span></div>
+                </div>
+                <div class="dn-coin">Launch coin on pump.fun</div>
+              </section>
+              <span class="tap"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section starts" id="starts">
+      <div class="picker" aria-labelledby="pickTitle">
+        <div class="picker-head"><h2 id="pickTitle">Pick a starting point</h2><span>Skip the subscription</span></div>
+        <div class="presets" id="presets"></div>
+        <p class="note">Tap one and Reboot builds your own version, with its own name and look. Logos show which app each is like; Reboot isn't affiliated with these companies.</p>
+      </div>
+    </section>
+
+    <section class="section" id="how">
+      <div class="sec-head"><div><h2>From idea to coin in four steps</h2><p>Every app stays yours: change it, roll it back, download it, publish it.</p></div><button class="btn sm" type="button" id="howDocs">Read the docs</button></div>
+      <ol class="steps">
+        <li><span class="n">01</span><h3>Start</h3><p>Describe it, pick a starting point, paste code, or drop in a website's address.</p></li>
+        <li><span class="n">02</span><h3>Plan &amp; build</h3><p>Remakes get a written blueprint first, then a build that implements all of it.</p></li>
+        <li><span class="n">03</span><h3>Grow it</h3><p>Ask for changes in plain words. Every result is a version you can go back to.</p></li>
+        <li><span class="n">04</span><h3>Launch</h3><p>Publish to a public link and launch the app's coin on pump.fun from your own wallet.</p></li>
+      </ol>
+    </section>
+
+    <section class="section" id="mine">
+      <div class="sec-head"><div><h2>Your apps</h2><p>Saved in this browser. Download or publish anything you want to keep.</p></div></div>
+      <div class="apps" id="apps"></div>
+    </section>
+
+    <footer><span>Reboot. Any app, any idea, anyone can build.</span><span>Coins are launched by your own wallet on pump.fun. Nothing here is financial advice.</span></footer>
+  </div>
+</main>
+
+<main id="docs" hidden>
+  <div class="wrap docs">
+    <nav class="toc" aria-label="Docs contents" id="toc">
+      <p class="mono">Docs</p>
+      <button type="button" data-to="d-overview">Overview</button>
+      <button type="button" data-to="d-build">Build an app</button>
+      <button type="button" data-to="d-remake">Remake a website or code</button>
+      <button type="button" data-to="d-change">Change &amp; versions</button>
+      <button type="button" data-to="d-publish">Publish &amp; download</button>
+      <button type="button" data-to="d-coin">Launch a coin</button>
+      <button type="button" data-to="d-limits">Limits</button>
+      <button type="button" data-to="d-host">Host your own Reboot</button>
+      <button type="button" data-to="d-faq">FAQ</button>
+    </nav>
+    <article class="article">
+      <h1>How Reboot works</h1>
+      <p class="intro">Reboot turns a description, a piece of code, or a website into a complete app you own. This page covers building, remaking, changing, publishing, and launching your app's coin on pump.fun.</p>
+
+      <section id="d-overview">
+        <h2>Overview</h2>
+        <ol class="flow">
+          <li><b>Start</b>Idea, starting point, code or website</li>
+          <li><b>Plan</b>Remakes get a written blueprint</li>
+          <li><b>Build</b>A complete single-file app</li>
+          <li><b>Launch</b>Publish it and launch its coin</li>
+        </ol>
+        <p>Every app Reboot builds is <strong>one self-contained HTML file</strong>: the layout, styles and code all live in it. That makes apps fast, easy to download, and easy to host anywhere. Apps keep their data in the browser they run in (local storage), so they work without accounts or servers.</p>
+        <p>Your apps and all their versions are saved in this browser. Nothing is uploaded until you choose <strong>Publish</strong> or <strong>Launch coin</strong>.</p>
+      </section>
+
+      <section id="d-build">
+        <h2>Build an app</h2>
+        <h3>Describe it</h3>
+        <p>Write what you want the way you'd explain it to a friend. Mention the screens, the main things people do, and the feel you want. For example: <em>"A recipe box that scales ingredients by servings, with a weekly meal planner and a shopping list."</em></p>
+        <h3>Pick a starting point</h3>
+        <p>The starting points build your own version of an app people usually pay for, like a design tool, a docs app or a music player. Each one comes with a detailed brief, so you get a full-featured app from one tap. Your version gets its own name and look.</p>
+        <h3>What to expect</h3>
+        <p>Every app is built to a quality bar: every button works, there are proper empty and error states, it works on phones and desktops, it has light and dark themes, and it opens with realistic sample content.</p>
+        <p>A progress bar shows how far along the build is, how long it's taken and roughly how long is left. New apps usually take a few minutes. Changes are faster: Reboot sends back only the parts that change, not the whole app. If an answer gets long, Reboot continues it automatically in parts.</p>
+      </section>
+
+      <section id="d-remake">
+        <h2>Remake a website or code</h2>
+        <h3>From a website</h3>
+        <ol>
+          <li>Choose <strong>Remake a website</strong> and enter the address, like <code>linear.app</code>.</li>
+          <li>Optionally say what should be different: your business name, extra features, a new look.</li>
+          <li>Reboot reads the page: its structure, sections, colors, fonts, headings and links.</li>
+          <li>Claude writes a <strong>blueprint</strong>: every screen, feature, data type, interaction and design choice. You can open it in the chat.</li>
+          <li>Claude builds the app from that blueprint, implementing every item.</li>
+        </ol>
+        <p>Some websites block automated reading, and some pages are built entirely by JavaScript. If the result looks thin, use <strong>Paste the page's code instead</strong>: open the page, right-click, choose <em>View Page Source</em>, copy everything and paste it in.</p>
+        <h3>From code</h3>
+        <p>Paste code in any language or framework (React, Vue, Python, PHP, an old jQuery page) and Reboot rebuilds its full behavior as a single-file app. Large pastes work best when they include the main screens and logic.</p>
+        <h3>Branding</h3>
+        <p>Remakes copy structure, features and feel, not someone else's brand. Your app gets an original name, logo and wording, and images are replaced with clean placeholders. If the brand is yours, say so in the box and Reboot will keep it.</p>
+      </section>
+
+      <section id="d-change">
+        <h2>Change &amp; versions</h2>
+        <p>Type what you want in the chat beside your app: <em>"Add a search box"</em>, <em>"Make the colors warmer"</em>, <em>"Let me export to CSV"</em>. Claude sends back just the parts that change and keeps everything else, including data you've already saved in it. For big changes it rewrites the whole app.</p>
+        <p>Every build is a new <strong>version</strong>. Use the version menu above the preview, or <em>Go back to version</em> in the chat, to return to any earlier one. Smaller, specific requests give the best results.</p>
+        <p>Switch between <strong>Desktop</strong> and <strong>Phone</strong> to check the layout, and open <strong>Code</strong> to see or copy the source.</p>
+      </section>
+
+      <section id="d-publish">
+        <h2>Publish &amp; download</h2>
+        <p><strong>Download</strong> saves your app as one <code>.html</code> file. Open it in any browser, or upload it to any static host.</p>
+        <p><strong>Publish</strong> uploads the current version to IPFS, a public file network, and gives you a link anyone can open. Publishing again after changes creates a new link. Published files are public and permanent, so don't publish anything private.</p>
+      </section>
+
+      <section id="d-coin">
+        <h2>Launch a coin on pump.fun</h2>
+        <p>Every app can have its own coin on <a href="https://pump.fun" target="_blank" rel="noopener">pump.fun</a>. You launch it from your own Solana wallet: you're the coin's creator, you pay the launch costs, and pump.fun pays the creator fees to you. Reboot never holds your funds or keys.</p>
+        <h3>What you need</h3>
+        <ul>
+          <li>A Solana wallet browser extension: Phantom, Solflare or Backpack.</li>
+          <li>About 0.03 SOL for the launch, plus whatever you want to spend on your first buy.</li>
+        </ul>
+        <h3>Step by step</h3>
+        <ol>
+          <li>Open your app and choose <strong>Launch coin</strong>.</li>
+          <li>Check the name (up to 32 characters), ticker (up to 10), description and image. Reboot makes an image from your ticker; choose <em>Change</em> to use your own.</li>
+          <li>Optionally enter a <strong>first buy</strong> in SOL. It's bought in the same transaction that creates the coin, so nobody can buy before you.</li>
+          <li>Choose <strong>Launch on pump.fun</strong>. Reboot publishes your app (it becomes the coin's website) and uploads the image and details.</li>
+          <li>Approve the one transaction in your wallet. When it confirms, your coin is live and Reboot opens it on pump.fun.</li>
+        </ol>
+        <h3>What happens on-chain</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Step</th><th>What it does</th><th>Who pays</th></tr></thead>
+          <tbody>
+            <tr><td>Create</td><td>pump.fun's <code>create_v2</code> makes the token and its bonding curve, with your wallet as creator</td><td>You: account rent and network fee</td></tr>
+            <tr><td>First buy</td><td>Buys tokens on the new curve in the same transaction, capped at the SOL you entered</td><td>You: the SOL you entered plus pump.fun's trading fee</td></tr>
+            <tr><td>Priority fee</td><td>Helps the transaction land when Solana is busy, added when it fits</td><td>You: usually well under 0.01 SOL</td></tr>
+          </tbody>
+        </table></div>
+        <div class="callout warn">Coins are public and permanent, and their prices can go to zero. Launch only what you're comfortable losing, and don't make promises about returns. Reboot isn't affiliated with pump.fun.</div>
+        <h3>If something goes wrong</h3>
+        <ul>
+          <li><strong>You cancelled in your wallet:</strong> nothing was launched and nothing was spent.</li>
+          <li><strong>Not enough SOL:</strong> lower the first buy or add SOL to your wallet.</li>
+          <li><strong>Name too long to fit:</strong> a create plus first buy only just fits in one Solana transaction. Shorten the name or ticker.</li>
+          <li><strong>Transaction expired:</strong> Solana was busy or the approval took too long. Try again; nothing was spent.</li>
+        </ul>
+      </section>
+
+      <section id="d-limits">
+        <h2>Limits</h2>
+        <ul>
+          <li>Apps run in the browser. Features that need a server, like real accounts, payments or sync between devices, are simulated in the app.</li>
+          <li>Apps can't embed other websites, and can only call public services that need no key.</li>
+          <li>Very large apps may need a couple of rounds: build the core first, then add features one change at a time.</li>
+          <li>Apps are saved per browser. Clearing your browser's site data deletes them.</li>
+        </ul>
+      </section>
+
+      <section id="d-host">
+        <h2>Host your own Reboot</h2>
+        <p>To run your own copy of Reboot with real coin launches:</p>
+        <ol>
+          <li>Get an <a href="https://console.anthropic.com" target="_blank" rel="noopener">Anthropic API key</a>, a <a href="https://pinata.cloud" target="_blank" rel="noopener">Pinata</a> key for IPFS, and a Solana RPC URL from Helius, Triton or QuickNode.</li>
+          <li>Import the repository into <a href="https://vercel.com/new" target="_blank" rel="noopener">Vercel</a> with <code>app</code> as the root directory.</li>
+          <li>Set the environment variables below and deploy.</li>
+        </ol>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Variable</th><th>What it's for</th></tr></thead>
+          <tbody>
+            <tr><td><code>ANTHROPIC_API_KEY</code></td><td>Builds apps (server only)</td></tr>
+            <tr><td><code>PINATA_JWT</code></td><td>Publishes apps and coin details to IPFS (server only)</td></tr>
+            <tr><td><code>PINATA_GATEWAY</code></td><td>Optional: your own IPFS gateway for images</td></tr>
+            <tr><td><code>VITE_RPC_URL</code></td><td>Solana RPC the browser uses to launch coins</td></tr>
+            <tr><td><code>VITE_CLUSTER</code></td><td><code>mainnet-beta</code> (pump.fun runs on mainnet)</td></tr>
+          </tbody>
+        </table></div>
+        <p>Before sending anyone real SOL, check the launch transaction against mainnet. This builds the exact transaction Reboot sends and simulates it without sending it or spending anything:</p>
+        <pre><code>cd app
+npm run simulate:launch -- https://your-rpc-url 0.01</code></pre>
+        <p>Every build is charged to your Anthropic key, so add sign-in or rate limits before you share your site widely.</p>
+      </section>
+
+      <section id="d-faq">
+        <h2>FAQ</h2>
+        <h3>Do I own the apps I build?</h3>
+        <p>Yes. The code is yours to change, download, host and sell.</p>
+        <h3>Is remaking a paid app legal?</h3>
+        <p>Building software with similar features is common. Copying a company's name, logo, artwork or written content isn't okay, which is why Reboot gives every remake its own branding. Check with a lawyer before you sell a remake commercially.</p>
+        <h3>Does Reboot take a cut of my coin?</h3>
+        <p>No. Your wallet is the coin's creator, and pump.fun pays the creator fees directly to it.</p>
+        <h3>Why did my build stop?</h3>
+        <p>Builds stop if you press Stop, lose your connection, or hit a usage limit. Your earlier versions are safe; send the request again.</p>
+      </section>
+    </article>
+  </div>
+</main>
+
+<div class="studio" id="studio" hidden>
+  <aside class="side">
+    <div class="side-head">
+      <input id="appName" aria-label="App name" maxlength="60">
+      <button class="btn ghost sm" id="delBtn" type="button" title="Delete this app">Delete</button>
+    </div>
+    <div class="log" id="log" aria-live="polite"></div>
+    <div class="ask">
+      <form id="askForm">
+        <label for="askText" hidden>Change your app</label>
+        <textarea id="askText" placeholder="Make the header sticky, add a search box, switch to a warmer palette…"></textarea>
+        <div class="row">
+          <span class="kbd">⌘ ↵</span>
+          <div style="display:flex;gap:6px">
+            <button class="btn sm" type="button" id="stopBtn" hidden>Stop</button>
+            <button class="btn solid sm" type="submit" id="askBtn">Update app</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </aside>
+  <section class="main">
+    <div class="bar">
+      <div class="seg" role="group" aria-label="View">
+        <button type="button" id="viewPreview" aria-pressed="true">Preview</button>
+        <button type="button" id="viewCode" aria-pressed="false">Code</button>
+      </div>
+      <div class="seg" role="group" aria-label="Device" id="deviceSeg">
+        <button type="button" id="devDesk" aria-pressed="true">Desktop</button>
+        <button type="button" id="devPhone" aria-pressed="false">Phone</button>
+      </div>
+      <select class="in" id="versions" aria-label="Version"></select>
+      <span class="grow"></span>
+      <button class="btn sm" id="dlBtn" type="button">Download</button>
+      <button class="btn sm" id="pubBtn" type="button">Publish</button>
+      <a class="coin-chip" id="coinChip" target="_blank" rel="noopener" hidden></a>
+      <button class="btn green sm" id="coinBtn" type="button">Launch coin</button>
+    </div>
+    <div class="stage" id="stage">
+      <iframe class="frame" id="frame" title="Your app" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads"></iframe>
+      <div class="blank" id="blank" hidden><b>Building your app</b>It appears here as soon as it's ready. Remakes plan first, so the preview starts a little later.</div>
+    </div>
+    <pre class="code" id="code" hidden></pre>
+  </section>
+</div>
+
+<dialog id="coinDlg" aria-labelledby="coinTitle">
+  <form class="dlg" method="dialog" id="coinForm">
+    <h2 id="coinTitle">Launch a coin</h2>
+    <p>Launch this app's coin on pump.fun. Your wallet creates it and earns its creator fees. The coin's website is your published app.</p>
+    <div class="coin-top">
+      <div class="coin-img">
+        <img id="coinImg" alt="Coin image">
+        <label for="coinFile">Change</label>
+        <input type="file" id="coinFile" accept="image/png,image/jpeg,image/gif,image/webp">
+      </div>
+      <div class="fields">
+        <div class="field"><label for="cName">Name <span id="cNameCt">0/32</span></label><input class="in" id="cName" maxlength="32" required></div>
+        <div class="field"><label for="cSym">Ticker <span id="cSymCt">0/10</span></label><input class="in" id="cSym" maxlength="10" required style="text-transform:uppercase"></div>
+      </div>
+    </div>
+    <div class="field"><label for="cDesc">Description <span>optional</span></label><textarea class="in" id="cDesc" maxlength="500"></textarea></div>
+    <div class="two">
+      <div class="field"><label for="cX">X <span>optional</span></label><input class="in" id="cX" placeholder="x.com/yourapp"></div>
+      <div class="field"><label for="cTg">Telegram <span>optional</span></label><input class="in" id="cTg" placeholder="t.me/yourapp"></div>
+    </div>
+    <div class="field"><label for="cBuy">Your first buy (SOL) <span>optional</span></label><input class="in" id="cBuy" inputmode="decimal" placeholder="0"></div>
+    <p class="warn">Coins are permanent and public. Launching costs about 0.03 SOL plus any first buy, all from your wallet. Meme coins are highly risky; only launch what you're comfortable losing.</p>
+    <ol class="progress" id="coinSteps" hidden>
+      <li data-s="0">Publish your app</li>
+      <li data-s="1">Upload the coin image and details</li>
+      <li data-s="2">Approve in your wallet</li>
+      <li data-s="3">Coin is live</li>
+    </ol>
+    <p class="err-line" id="coinErr" role="alert"></p>
+    <div class="dlg-foot">
+      <button class="btn" value="cancel" id="coinCancel" formnovalidate>Cancel</button>
+      <button class="btn green" type="button" id="coinGo">Launch on pump.fun</button>
+    </div>
+  </form>
+</dialog>
+
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+node_modules
+dist
+.env
+.vercel
+dist-artifact
+dist-sim
+reboot.zip
