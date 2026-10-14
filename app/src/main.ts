@@ -693,6 +693,7 @@ $("aiClear").addEventListener("click", () => {
 });
 renderAi();
 void serverHasAI().then((ai) => { simpleMode = !ai; renderAi(); });
+window.addEventListener("reboot:simple", () => { simpleMode = true; renderAi(); });
 
 if (IN_ARTIFACT) {
   // Inside Claude, builds use the viewer's own Claude account; no AI setting needed.

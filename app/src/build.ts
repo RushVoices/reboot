@@ -289,7 +289,10 @@ export async function build(req: BuildRequest, onProgress: (p: BuildProgress) =>
   try {
     raw = await ask(req, onProgress, signal);
   } catch (e) {
-    if (noAI(e)) return simpleBuild(req, onProgress, signal);
+    if (noAI(e)) {
+      window.dispatchEvent(new Event("reboot:simple"));
+      return simpleBuild(req, onProgress, signal);
+    }
     throw e;
   }
   const out = splitOutput(raw);
