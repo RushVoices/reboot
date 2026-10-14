@@ -32,7 +32,7 @@ Any app. Any idea. Anyone can build.
 
 1. **Start.** Describe an app, tap a starting point, paste code, or enter a website address.
 2. **Plan (remakes).** For code and websites, Reboot first reads the material (for a website, `api/fetch-site.ts` fetches the page, strips scripts and bulk, and extracts colors, fonts, headings and links). Claude then writes a blueprint covering screens, an exhaustive feature list, data, interactions, visual design and an original name. It shows in the chat.
-3. **Build.** Claude builds a complete single-file HTML app to a strict quality bar (every control works, real empty/error states, responsive, light and dark, realistic sample data). Effort is tuned for speed: changes run at `low`, new apps and plans at `medium`, remakes at `high` (inside Claude, everything uses the balanced model at low effort, falling back to the fast model if an answer comes back empty). Long apps that hit the limit are continued automatically.
+3. **Build.** Claude builds a complete single-file HTML app to a strict quality bar (every control works, real empty/error states, responsive, light and dark, realistic sample data). Effort is tuned for speed: changes run at `low`, new apps and plans at `medium`, remakes at `medium` (inside Claude, everything uses the balanced model at low effort, falling back to the fast model if an answer comes back empty). Long apps that hit the limit are continued automatically.
 4. **Grow it.** Each change request sends the current app plus the earlier requests, and Claude returns SEARCH/REPLACE edits that are applied in the browser (or the whole app for big changes, or if an edit doesn't match). Every result is a new version you can go back to, download, or publish to IPFS.
 5. **Launch its coin.** The dialog prefills name, ticker, description and a generated image. Launching publishes the app to IPFS (it becomes the coin's website), uploads the image and metadata, then asks the creator's wallet to sign **one transaction** that creates the coin on pump.fun and, if set, makes the first buy. The wallet is the coin's creator, so pump.fun pays its creator fees to it. Reboot never holds funds or keys.
 
@@ -61,7 +61,7 @@ npx vercel dev          # runs the site and the /api routes together
 
 Deploy with `npx vercel deploy` (project root: `app`), setting `ANTHROPIC_API_KEY`, `PINATA_JWT` (and optionally `PINATA_GATEWAY`), `VITE_RPC_URL` and `VITE_CLUSTER=mainnet-beta` in the Vercel project. Without `VITE_RPC_URL` everything works except coin launches.
 
-`vercel.json` gives `api/generate.ts` up to 800 seconds, which high-effort remakes can need. That needs a Vercel Pro plan; on Hobby the limit is 300 seconds, so lower `maxDuration` to 300 there.
+`vercel.json` gives `api/generate.ts` 300 seconds, the most Vercel's free Hobby plan allows. Each request stops writing at about 270 seconds and the browser carries on in a new request, so long builds still finish.
 
 ## Before going public
 

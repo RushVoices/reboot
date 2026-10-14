@@ -125,7 +125,8 @@ async function askClaude(
 
 // ---- deployed site ----------------------------------------------------------------
 
-async function askServer(body: object, onText: (raw: string) => void, signal?: AbortSignal): Promise<string> {
+/** One request to api/generate.ts. Resolves with what it wrote and whether to continue. */
+async function serverPart(body: object, onText: (text: string) => void, signal?: AbortSignal) {
   const res = await fetch("/api/generate", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -139,8 +140,7 @@ async function askServer(body: object, onText: (raw: string) => void, signal?: A
   const reader = res.body.getReader();
   const dec = new TextDecoder();
   let buf = "";
-  let raw = "";
-  let finished = false;
+  let text = "";
   for (;;) {
     const { value, done } = await reader.read();
     if (done) break;
@@ -151,18 +151,31 @@ async function askServer(body: object, onText: (raw: string) => void, signal?: A
       buf = buf.slice(nl + 1);
       if (!line) continue;
       const ev = JSON.parse(line) as { t: string; d?: string };
-      if (ev.t === "text") {
-        raw += ev.d ?? "";
-        onText(raw);
-      } else if (ev.t === "error") {
-        throw new Error(ev.d || "Building failed.");
-      } else if (ev.t === "done") {
-        finished = true;
-      }
+      if (ev.t === "text") { text += ev.d ?? ""; onText(text); }
+      else if (ev.t === "error") throw new Error(ev.d || "Building failed.");
+      else if (ev.t === "done") return { text, more: false };
+      else if (ev.t === "more") return { text, more: true };
     }
   }
-  if (!finished) throw new Error("The connection dropped before Claude finished. Try again.");
-  return raw;
+  // The request ended without saying it finished (a dropped connection or a
+  // timed-out request): continue from what arrived, if anything did.
+  if (text) return { text, more: true };
+  throw new Error("The connection dropped before Claude finished. Try again.");
+}
+
+/**
+ * Asks the server, continuing in new requests while it says there's more. Each
+ * request has to finish within Vercel's time limit, so long builds arrive in parts.
+ */
+async function askServer(body: object, onText: (raw: string, part: number) => void, signal?: AbortSignal): Promise<string> {
+  let sofar = "";
+  for (let part = 0; part < 5; part++) {
+    const prev = sofar;
+    const { text, more } = await serverPart(part ? { ...body, partial: prev } : body, (t) => onText(part ? stitch(prev, t) : t, part), signal);
+    sofar = part ? stitch(prev, text) : text;
+    if (!more) return sofar;
+  }
+  throw new Error("This app is too big to finish in one go. Ask for fewer features, then add more one change at a time.");
 }
 
 // ---- public API -------------------------------------------------------------------
@@ -171,7 +184,7 @@ async function askServer(body: object, onText: (raw: string) => void, signal?: A
 export async function plan(req: BuildRequest, onText: (text: string) => void, signal?: AbortSignal): Promise<string> {
   const text = IN_ARTIFACT
     ? await askClaude(`${PLAN_SYSTEM}\n\n---\n\n${planMessage(req)}`, { maxParts: 1 }, (t) => onText(t), signal)
-    : await askServer({ ...req, mode: "plan" }, onText, signal);
+    : await askServer({ ...req, mode: "plan" }, (t) => onText(t), signal);
   return text.trim();
 }
 
@@ -206,7 +219,7 @@ export function applyEdits(html: string, raw: string): string | null {
 async function ask(req: BuildRequest, onProgress: (p: BuildProgress) => void, signal?: AbortSignal) {
   return IN_ARTIFACT
     ? askClaude(`${SYSTEM}\n\n---\n\n${userMessage(req)}`, { maxParts: 4 }, (t, part) => onProgress({ raw: t, part, ...splitOutput(t) }), signal)
-    : askServer(req, (t) => onProgress({ raw: t, ...splitOutput(t) }), signal);
+    : askServer(req, (t, part) => onProgress({ raw: t, part, ...splitOutput(t) }), signal);
 }
 
 const complete = (html: string) => /<\/html>\s*$/i.test(html);
