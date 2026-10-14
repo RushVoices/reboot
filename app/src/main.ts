@@ -2,7 +2,7 @@
 // planned and built, keep changing it, publish it, and launch its coin on
 // pump.fun.
 
-import { IN_ARTIFACT, build, fetchSite, plan, type BuildRequest } from "./build";
+import { IN_ARTIFACT, build, fetchSite, plan, serverHasAI, type BuildRequest } from "./build";
 import { cleanHtml, siteNotes } from "./site";
 import { EXPECTED_APP_CHARS, Progress, duration } from "./progress";
 import { startShowcase } from "./showcase";
@@ -377,10 +377,16 @@ async function runRemake(job: { url?: string; pasted?: string; source?: string; 
         notes = siteNotes(job.pasted, job.url || "https://example.com").text;
       } else if (!IN_ARTIFACT) {
         turn.progress.setPhase("read", `Reading ${url.replace(/^https?:\/\//, "")}…`);
-        const site = await fetchSite(url, ctrl.signal);
-        url = site.url;
-        html = site.html;
-        notes = site.notes;
+        // A site that can't be read (blocked, down) isn't fatal: rebuild from the address alone.
+        const site = await fetchSite(url, ctrl.signal).catch((e) => {
+          if (ctrl.signal.aborted) throw e;
+          return null;
+        });
+        if (site) {
+          url = site.url;
+          html = site.html;
+          notes = site.notes;
+        }
       }
       req.site = { url, notes };
       if (html) req.source = html;
@@ -653,9 +659,14 @@ $<HTMLInputElement>("coinFile").addEventListener("change", (e) => {
 
 // ---- AI settings: free AI, or the visitor's own Claude key -----------------------
 
+let simpleMode = false;
 function renderAi() {
   const own = !!ownKey();
-  $("aiLabel").textContent = own ? "Your Claude" : "Free AI";
+  $("aiLabel").textContent = own ? "Your Claude" : simpleMode ? "Simple mode" : "Free AI";
+  $("aiFree").querySelector("b")!.textContent = simpleMode ? "Simple mode" : "Free AI";
+  $("aiFree").querySelector("span")!.textContent = simpleMode
+    ? "Free. Builds a ready-made template app that matches your idea."
+    : "No account needed. Shared daily limit, simpler apps.";
   $("aiBtn").classList.toggle("own", own);
   $("aiFree").classList.toggle("on", !own);
   $("aiOwn").classList.toggle("on", own);
@@ -681,6 +692,7 @@ $("aiClear").addEventListener("click", () => {
   toast("Builds now use the free AI.");
 });
 renderAi();
+void serverHasAI().then((ai) => { simpleMode = !ai; renderAi(); });
 
 if (IN_ARTIFACT) {
   // Inside Claude, builds use the viewer's own Claude account; no AI setting needed.

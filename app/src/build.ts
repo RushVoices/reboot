@@ -6,6 +6,7 @@
 
 import { PLAN_SYSTEM, SYSTEM, kindOf, planMessage, userMessage } from "./prompt";
 import { askOwnClaude, ownKey } from "./ownkey";
+import { describe, templateApp, templateChange } from "./templates";
 
 export const IN_ARTIFACT = import.meta.env.MODE === "artifact";
 
@@ -187,7 +188,11 @@ export async function plan(req: BuildRequest, onText: (text: string) => void, si
     ? await askClaude(`${PLAN_SYSTEM}\n\n---\n\n${planMessage(req)}`, { maxParts: 1 }, (t) => onText(t), signal)
     : ownKey()
       ? await askOwnClaude(PLAN_SYSTEM, planMessage(req), { maxParts: 1, light: false }, (t) => onText(t), signal)
-      : await askServer({ ...req, mode: "plan" }, (t) => onText(t), signal);
+      : await askServer({ ...req, mode: "plan" }, (t) => onText(t), signal).catch((e) => {
+          if (!noAI(e)) throw e;
+          const app = simpleApp(req);
+          return describe(app.kind, app.name);
+        });
   return text.trim();
 }
 
@@ -229,8 +234,64 @@ async function ask(req: BuildRequest, onProgress: (p: BuildProgress) => void, si
 
 const complete = (html: string) => /<\/html>\s*$/i.test(html);
 
+// ---- simple mode: no AI configured on the server ---------------------------------
+
+/**
+ * True when the server's AI can't build right now: none set up, a key that
+ * doesn't work, no credits, or the free limit used up. Builds then fall back
+ * to templates so the site always makes something. (A visitor's own key never
+ * falls back: they'd want to know it's wrong.)
+ */
+const noAI = (e: unknown) =>
+  !ownKey() && e instanceof Error &&
+  /not configured|API key|workspace|out of credits|credit balance|free building limit|server had a problem/i.test(e.message);
+
+function simpleApp(req: BuildRequest) {
+  const text = `${req.prompt} ${(req.source ?? "").slice(0, 3000)}`;
+  const accent = req.site?.notes.match(/Most used colors: ([^\n]*)/)?.[1].split(", ").find((c) => /^#[0-9a-f]{6}$/i.test(c) && !/^#(?:f{6}|0{6}|e\w{5}|f\w{5})$/i.test(c));
+  return templateApp(text, { site: req.site?.url, accent });
+}
+
+/** Builds from a template, "typing" it out over a couple of seconds so progress shows. */
+async function simpleBuild(req: BuildRequest, onProgress: (p: BuildProgress) => void, signal?: AbortSignal) {
+  let out: { note: string; html: string };
+  if (kindOf(req) === "change" && req.html) {
+    const changed = templateChange(req.html, req.prompt);
+    if (!changed) throw new Error("Simple mode can change the color (\"make it blue\"), switch to dark mode, or rename the app (\"call it Sunny\"). For anything else, add a Claude key in AI settings.");
+    out = changed;
+  } else {
+    out = simpleApp(req);
+  }
+  const raw = `${out.note}\n${out.html}`;
+  for (let i = 1; i <= 12; i++) {
+    if (signal?.aborted) throw new Error("Stopped.");
+    await new Promise((r) => setTimeout(r, 160));
+    const t = raw.slice(0, Math.ceil((raw.length * i) / 12));
+    onProgress({ raw: t, ...splitOutput(t) });
+  }
+  return out;
+}
+
+/** Whether the server has an AI configured. Asking costs nothing: an empty request is rejected before any AI call. */
+export async function serverHasAI(): Promise<boolean> {
+  if (IN_ARTIFACT) return true;
+  try {
+    const res = await fetch("/api/generate", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
+    const body = await res.json().catch(() => ({}));
+    return !/not configured/i.test(body.error ?? "");
+  } catch {
+    return true;
+  }
+}
+
 export async function build(req: BuildRequest, onProgress: (p: BuildProgress) => void, signal?: AbortSignal) {
-  const raw = await ask(req, onProgress, signal);
+  let raw: string;
+  try {
+    raw = await ask(req, onProgress, signal);
+  } catch (e) {
+    if (noAI(e)) return simpleBuild(req, onProgress, signal);
+    throw e;
+  }
   const out = splitOutput(raw);
   if (out.html) {
     if (!complete(out.html)) throw new Error("The app came back incomplete. Try again.");
